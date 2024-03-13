@@ -1,0 +1,180 @@
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> --Name: Chan Kai Yang
+SQL> --Description: Denormalisation and Indexing
+SQL> 
+SQL> --(1)
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT DISTINCT C_NAME, C_ADDRESS
+  3  FROM CUSTOMER JOIN ORDERS
+  4  ON C_CUSTKEY = O_CUSTKEY
+  5  WHERE EXTRACT(YEAR FROM O_ORDERDATE) = 1992;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 351496995                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------------                                                                                                                                                                                                           
+| Id  | Operation             | Name            | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |                                                                                                                                                                                                           
+-------------------------------------------------------------------------------------------------                                                                                                                                                                                                           
+|   0 | SELECT STATEMENT      |                 |  4198 |   213K|       |  3153   (1)| 00:00:01 |                                                                                                                                                                                                           
+|   1 |  HASH UNIQUE          |                 |  4198 |   213K|   280K|  3153   (1)| 00:00:01 |                                                                                                                                                                                                           
+|*  2 |   HASH JOIN           |                 |  4198 |   213K|       |  3096   (1)| 00:00:01 |                                                                                                                                                                                                           
+|   3 |    VIEW               | VW_DTP_EE586047 |  4198 | 16792 |       |  2707   (1)| 00:00:01 |                                                                                                                                                                                                           
+|   4 |     HASH UNIQUE       |                 |  4198 | 46178 |       |  2707   (1)| 00:00:01 |                                                                                                                                                                                                           
+|*  5 |      TABLE ACCESS FULL| ORDERS          |  4500 | 49500 |       |  2706   (1)| 00:00:01 |                                                                                                                                                                                                           
+|   6 |    TABLE ACCESS FULL  | CUSTOMER        | 45000 |  2109K|       |   389   (0)| 00:00:01 |                                                                                                                                                                                                           
+-------------------------------------------------------------------------------------------------                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   2 - access("C_CUSTKEY"="ITEM_1")                                                                                                                                                                                                                                                                         
+   5 - filter(EXTRACT(YEAR FROM INTERNAL_FUNCTION("ORDERS"."O_ORDERDATE"))=1992 AND                                                                                                                                                                                                                         
+              "O_CUSTKEY">=0)                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                            
+Note                                                                                                                                                                                                                                                                                                        
+-----                                                                                                                                                                                                                                                                                                       
+   - this is an adaptive plan                                                                                                                                                                                                                                                                               
+
+24 rows selected.
+
+SQL> 
+SQL> --(2)
+SQL> CREATE TABLE TASK3(
+  2  O_ORDERKEY      NUMBER(12)      NOT NULL,
+  3  O_CUSTKEY	     NUMBER(12)      NOT NULL,
+  4  O_ORDERSTATUS   CHAR(1)	     NOT NULL,
+  5  O_TOTALPRICE    NUMBER(12,2)    NOT NULL,
+  6  O_ORDERDATE     DATE	     NOT NULL,
+  7  O_ORDERPRIORITY CHAR(15)	     NOT NULL,
+  8  O_CLERK	     CHAR(15)	     NOT NULL,
+  9  O_SHIPPRIORITY  NUMBER(12)      NOT NULL,
+ 10  O_COMMENT	     VARCHAR(79)     NOT NULL,
+ 11  C_NAME	     VARCHAR(25)     NOT NULL,
+ 12  C_ADDRESS	     VARCHAR(40)     NOT NULL,
+ 13  	     CONSTRAINT TASK3_PKEY PRIMARY KEY (O_ORDERKEY),
+ 14  	     CONSTRAINT TASK3_FKEY1 FOREIGN kEY (O_CUSTKEY)
+ 15  		     REFERENCES CUSTOMER(C_CUSTKEY),
+ 16  	     CONSTRAINT TASK3_CHECK1 CHECK( O_TOTALPRICE >= 0) );
+
+Table created.
+
+SQL> 
+SQL> --(3)
+SQL> INSERT INTO TASK3 (O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT, C_NAME, C_ADDRESS)
+  2  SELECT O_ORDERKEY, O_CUSTKEY, O_ORDERSTATUS, O_TOTALPRICE, O_ORDERDATE, O_ORDERPRIORITY, O_CLERK, O_SHIPPRIORITY, O_COMMENT, C_NAME, C_ADDRESS
+  3  FROM ORDERS JOIN CUSTOMER
+  4  ON C_CUSTKEY = O_CUSTKEY;
+
+450000 rows created.
+
+SQL> 
+SQL> --(4)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT DISTINCT C_NAME, C_ADDRESS
+  3  FROM TASK3
+  4  WHERE EXTRACT(YEAR FROM O_ORDERDATE) = 1992;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3283427341                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+------------------------------------------------------------------------------------                                                                                                                                                                                                                        
+| Id  | Operation          | Name  | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |                                                                                                                                                                                                                        
+------------------------------------------------------------------------------------                                                                                                                                                                                                                        
+|   0 | SELECT STATEMENT   |       | 61154 |  2687K|       |  4475   (1)| 00:00:01 |                                                                                                                                                                                                                        
+|   1 |  HASH UNIQUE       |       | 61154 |  2687K|  3384K|  4475   (1)| 00:00:01 |                                                                                                                                                                                                                        
+|*  2 |   TABLE ACCESS FULL| TASK3 | 61154 |  2687K|       |  3777   (1)| 00:00:01 |                                                                                                                                                                                                                        
+------------------------------------------------------------------------------------                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   2 - filter(EXTRACT(YEAR FROM INTERNAL_FUNCTION("O_ORDERDATE"))=1992)                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                            
+Note                                                                                                                                                                                                                                                                                                        
+-----                                                                                                                                                                                                                                                                                                       
+   - dynamic statistics used: dynamic sampling (level=2)                                                                                                                                                                                                                                                    
+
+18 rows selected.
+
+SQL> 
+SQL> --(5)
+SQL> CREATE INDEX IDX3 ON TASK3 (O_ORDERDATE, C_NAME, C_ADDRESS);
+
+Index created.
+
+SQL> 
+SQL> --(6)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT DISTINCT C_NAME, C_ADDRESS
+  3  FROM TASK3
+  4  WHERE EXTRACT(YEAR FROM O_ORDERDATE) = 1992;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1426004808                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+--------------------------------------------------------------------------------------                                                                                                                                                                                                                      
+| Id  | Operation             | Name | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |                                                                                                                                                                                                                      
+--------------------------------------------------------------------------------------                                                                                                                                                                                                                      
+|   0 | SELECT STATEMENT      |      | 61154 |  2687K|       |  2258   (1)| 00:00:01 |                                                                                                                                                                                                                      
+|   1 |  HASH UNIQUE          |      | 61154 |  2687K|  3384K|  2258   (1)| 00:00:01 |                                                                                                                                                                                                                      
+|*  2 |   INDEX FAST FULL SCAN| IDX3 | 61154 |  2687K|       |  1560   (1)| 00:00:01 |                                                                                                                                                                                                                      
+--------------------------------------------------------------------------------------                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   2 - filter(EXTRACT(YEAR FROM INTERNAL_FUNCTION("O_ORDERDATE"))=1992)                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                            
+Note                                                                                                                                                                                                                                                                                                        
+-----                                                                                                                                                                                                                                                                                                       
+   - dynamic statistics used: dynamic sampling (level=2)                                                                                                                                                                                                                                                    
+
+18 rows selected.
+
+SQL> 
+SQL> --Cost before denormalization
+SQL> -- 3153
+SQL> --Cost after denormalization
+SQL> -- 4475
+SQL> -- Cost after indexing
+SQL> -- 2258
+SQL> 
+SQL> -- The query did not benefit from denormalization
+SQL> -- with the cost increasing from 3153 to 4475.
+SQL> -- This is due to the cost of joining CUSTOMER AND ORDERS being lower than a full table scan of TASK3.
+SQL> -- The query then benefitted from index IDX3
+SQL> -- which lowered the cost from 4475 to 2258.
+SQL> 
+SQL> -- The index uses a INDEX FAST FULL SCAN based on O_ORDERDATE, C_NAME, and C_ADDRESS.
+SQL> -- No table accessed is required as all required information is available directly from the index.
+SQL> -- This decreases the cost significantly as only a horizontal traversal of the index is required.
+SQL> 
+SQL> SPOOL OFF

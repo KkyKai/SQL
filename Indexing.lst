@@ -1,0 +1,359 @@
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> --Name: Chan Kai Yang
+SQL> --Description: Indexing
+SQL> 
+SQL> --(1)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_DISCOUNT, L_TAX, L_ORDERKEY
+  3  FROM LINEITEM JOIN ORDERS
+  4  ON LINEITEM.L_ORDERKEY = ORDERS.O_ORDERKEY
+  5  WHERE ORDERS.O_TOTALPRICE = 186342.80;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 523862552                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+----------------------------------------------------------------------------------------------                                                                                                                                                                                                              
+| Id  | Operation                    | Name          | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                              
+----------------------------------------------------------------------------------------------                                                                                                                                                                                                              
+|   0 | SELECT STATEMENT             |               |     4 |    76 |  2700   (1)| 00:00:01 |                                                                                                                                                                                                              
+|   1 |  NESTED LOOPS                |               |     4 |    76 |  2700   (1)| 00:00:01 |                                                                                                                                                                                                              
+|   2 |   NESTED LOOPS               |               |     4 |    76 |  2700   (1)| 00:00:01 |                                                                                                                                                                                                              
+|*  3 |    TABLE ACCESS FULL         | ORDERS        |     1 |    10 |  2697   (1)| 00:00:01 |                                                                                                                                                                                                              
+|*  4 |    INDEX RANGE SCAN          | LINEITEM_PKEY |     4 |       |     2   (0)| 00:00:01 |                                                                                                                                                                                                              
+|   5 |   TABLE ACCESS BY INDEX ROWID| LINEITEM      |     4 |    36 |     3   (0)| 00:00:01 |                                                                                                                                                                                                              
+----------------------------------------------------------------------------------------------                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   3 - filter("ORDERS"."O_TOTALPRICE"=186342.80)                                                                                                                                                                                                                                                            
+   4 - access("LINEITEM"."L_ORDERKEY"="ORDERS"."O_ORDERKEY")                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                            
+Note                                                                                                                                                                                                                                                                                                        
+-----                                                                                                                                                                                                                                                                                                       
+   - this is an adaptive plan                                                                                                                                                                                                                                                                               
+
+22 rows selected.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_DISCOUNT, L_TAX, L_ORDERKEY
+  3  FROM LINEITEM JOIN PARTSUPP
+  4  ON LINEITEM.L_PARTKEY = PARTSUPP.PS_PARTKEY
+  5  AND
+  6  LINEITEM.L_SUPPKEY = PARTSUPP.PS_SUPPKEY
+  7  WHERE PARTSUPP.PS_AVAILQTY = 3325;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2550032287                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                             
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+|   0 | SELECT STATEMENT   |          |   180 |  4680 | 14014   (1)| 00:00:01 |                                                                                                                                                                                                                             
+|*  1 |  HASH JOIN         |          |   180 |  4680 | 14014   (1)| 00:00:01 |                                                                                                                                                                                                                             
+|*  2 |   TABLE ACCESS FULL| PARTSUPP |    24 |   240 |  1856   (1)| 00:00:01 |                                                                                                                                                                                                                             
+|*  3 |   TABLE ACCESS FULL| LINEITEM |  1800K|    27M| 12153   (1)| 00:00:01 |                                                                                                                                                                                                                             
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - access("LINEITEM"."L_PARTKEY"="PARTSUPP"."PS_PARTKEY" AND                                                                                                                                                                                                                                            
+              "LINEITEM"."L_SUPPKEY"="PARTSUPP"."PS_SUPPKEY")                                                                                                                                                                                                                                               
+   2 - filter("PARTSUPP"."PS_AVAILQTY"=3325)                                                                                                                                                                                                                                                                
+   3 - filter("LINEITEM"."L_PARTKEY">=0)                                                                                                                                                                                                                                                                    
+
+18 rows selected.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT ORDERS.O_TOTALPRICE, ORDERS.O_ORDERKEY
+  3  FROM ORDERS
+  4  WHERE ORDERS.O_TOTALPRICE = 186342.80;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1275100350                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                                
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+|   0 | SELECT STATEMENT  |        |     1 |    10 |  2697   (1)| 00:00:01 |                                                                                                                                                                                                                                
+|*  1 |  TABLE ACCESS FULL| ORDERS |     1 |    10 |  2697   (1)| 00:00:01 |                                                                                                                                                                                                                                
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - filter("ORDERS"."O_TOTALPRICE"=186342.80)                                                                                                                                                                                                                                                            
+
+13 rows selected.
+
+SQL> 
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT AVG(L_DISCOUNT), AVG(L_TAX)
+  3  FROM LINEITEM
+  4  WHERE L_DISCOUNT > 0.04 AND L_TAX > 0.02;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2287326370                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                             
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+|   0 | SELECT STATEMENT   |          |     1 |     4 | 12154   (1)| 00:00:01 |                                                                                                                                                                                                                             
+|   1 |  SORT AGGREGATE    |          |     1 |     4 |            |          |                                                                                                                                                                                                                             
+|*  2 |   TABLE ACCESS FULL| LINEITEM |   810K|  3164K| 12154   (1)| 00:00:01 |                                                                                                                                                                                                                             
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   2 - filter("L_DISCOUNT">0.04 AND "L_TAX">0.02)                                                                                                                                                                                                                                                           
+
+14 rows selected.
+
+SQL> 
+SQL> --(2)
+SQL> CREATE INDEX IDX1 ON LINEITEM (L_PARTKEY, L_SUPPKEY, L_DISCOUNT, L_TAX, L_ORDERKEY);
+
+Index created.
+
+SQL> CREATE INDEX IDX2 ON ORDERS (O_TOTALPRICE, O_ORDERKEY);
+
+Index created.
+
+SQL> 
+SQL> --(3)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_DISCOUNT, L_TAX, L_ORDERKEY
+  3  FROM LINEITEM JOIN ORDERS
+  4  ON LINEITEM.L_ORDERKEY = ORDERS.O_ORDERKEY
+  5  WHERE ORDERS.O_TOTALPRICE = 186342.80;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3761090906                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+----------------------------------------------------------------------------------------------                                                                                                                                                                                                              
+| Id  | Operation                    | Name          | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                              
+----------------------------------------------------------------------------------------------                                                                                                                                                                                                              
+|   0 | SELECT STATEMENT             |               |     4 |    76 |     6   (0)| 00:00:01 |                                                                                                                                                                                                              
+|   1 |  NESTED LOOPS                |               |     4 |    76 |     6   (0)| 00:00:01 |                                                                                                                                                                                                              
+|   2 |   NESTED LOOPS               |               |     4 |    76 |     6   (0)| 00:00:01 |                                                                                                                                                                                                              
+|*  3 |    INDEX RANGE SCAN          | IDX2          |     1 |    10 |     3   (0)| 00:00:01 |                                                                                                                                                                                                              
+|*  4 |    INDEX RANGE SCAN          | LINEITEM_PKEY |     4 |       |     2   (0)| 00:00:01 |                                                                                                                                                                                                              
+|   5 |   TABLE ACCESS BY INDEX ROWID| LINEITEM      |     4 |    36 |     3   (0)| 00:00:01 |                                                                                                                                                                                                              
+----------------------------------------------------------------------------------------------                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   3 - access("ORDERS"."O_TOTALPRICE"=186342.80)                                                                                                                                                                                                                                                            
+   4 - access("LINEITEM"."L_ORDERKEY"="ORDERS"."O_ORDERKEY")                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                            
+Note                                                                                                                                                                                                                                                                                                        
+-----                                                                                                                                                                                                                                                                                                       
+   - this is an adaptive plan                                                                                                                                                                                                                                                                               
+
+22 rows selected.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_DISCOUNT, L_TAX, L_ORDERKEY
+  3  FROM LINEITEM JOIN PARTSUPP
+  4  ON LINEITEM.L_PARTKEY = PARTSUPP.PS_PARTKEY
+  5  AND
+  6  LINEITEM.L_SUPPKEY = PARTSUPP.PS_SUPPKEY
+  7  WHERE PARTSUPP.PS_AVAILQTY = 3325;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1952832344                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                             
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+|   0 | SELECT STATEMENT   |          |   180 |  4680 |  1904   (1)| 00:00:01 |                                                                                                                                                                                                                             
+|   1 |  NESTED LOOPS      |          |   180 |  4680 |  1904   (1)| 00:00:01 |                                                                                                                                                                                                                             
+|*  2 |   TABLE ACCESS FULL| PARTSUPP |    24 |   240 |  1856   (1)| 00:00:01 |                                                                                                                                                                                                                             
+|*  3 |   INDEX RANGE SCAN | IDX1     |     8 |   128 |     2   (0)| 00:00:01 |                                                                                                                                                                                                                             
+-------------------------------------------------------------------------------                                                                                                                                                                                                                             
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   2 - filter("PARTSUPP"."PS_AVAILQTY"=3325)                                                                                                                                                                                                                                                                
+   3 - access("LINEITEM"."L_PARTKEY"="PARTSUPP"."PS_PARTKEY" AND                                                                                                                                                                                                                                            
+              "LINEITEM"."L_SUPPKEY"="PARTSUPP"."PS_SUPPKEY")                                                                                                                                                                                                                                               
+       filter("LINEITEM"."L_PARTKEY">=0)                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                            
+Note                                                                                                                                                                                                                                                                                                        
+-----                                                                                                                                                                                                                                                                                                       
+   - this is an adaptive plan                                                                                                                                                                                                                                                                               
+
+22 rows selected.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT ORDERS.O_TOTALPRICE, ORDERS.O_ORDERKEY
+  3  FROM ORDERS
+  4  WHERE ORDERS.O_TOTALPRICE = 186342.80;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 606941478                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------                                                                                                                                                                                                                                   
+| Id  | Operation        | Name | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                                   
+-------------------------------------------------------------------------                                                                                                                                                                                                                                   
+|   0 | SELECT STATEMENT |      |     1 |    10 |     3   (0)| 00:00:01 |                                                                                                                                                                                                                                   
+|*  1 |  INDEX RANGE SCAN| IDX2 |     1 |    10 |     3   (0)| 00:00:01 |                                                                                                                                                                                                                                   
+-------------------------------------------------------------------------                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - access("ORDERS"."O_TOTALPRICE"=186342.80)                                                                                                                                                                                                                                                            
+
+13 rows selected.
+
+SQL> 
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT AVG(L_DISCOUNT), AVG(L_TAX)
+  3  FROM LINEITEM
+  4  WHERE L_DISCOUNT > 0.04 AND L_TAX > 0.02;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 325870156                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+| Id  | Operation             | Name | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                              
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+|   0 | SELECT STATEMENT      |      |     1 |     4 |  2934   (1)| 00:00:01 |                                                                                                                                                                                                                              
+|   1 |  SORT AGGREGATE       |      |     1 |     4 |            |          |                                                                                                                                                                                                                              
+|*  2 |   INDEX FAST FULL SCAN| IDX1 |   810K|  3164K|  2934   (1)| 00:00:01 |                                                                                                                                                                                                                              
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   2 - filter("L_DISCOUNT">0.04 AND "L_TAX">0.02)                                                                                                                                                                                                                                                           
+
+14 rows selected.
+
+SQL> 
+SQL> --(4)
+SQL> --Index is created on LINEITEM table as LINEITEM is the largest table in the 4 queries, and is accessed by 3 queries, namely 1, 2, and 4.
+SQL> -- Index is created on ORDERS table as ORDERS is larger than PARTSUPP, and is accessed by 2 queries, namely 1 and 3.
+SQL> 
+SQL> 
+SQL> --Cost for query 1 before indexing:
+SQL> --2700
+SQL> 
+SQL> --Cost for query 1 after indexing:
+SQL> --6
+SQL> 
+SQL> --Cost Savings for query 1
+SQL> --2700 - 6 = 2694
+SQL> -- The system does a index range scan on LINEITEM_PKEY where L_ORDERKEY is part of primary key of LINEITEM
+SQL> -- Where a vertical traversal of the PKEY index is conducted for the join operation.
+SQL> -- The system then do a index range scan on IDX2 based on O_TOTALPRICE which is part of the created index.
+SQL> -- Where a vertical traversal of the IDX2 index is conducted to efficiently retrieve rows that match the O_TOTALPRICE condition.
+SQL> 
+SQL> --Cost for query 2 before indexing:
+SQL> --14014
+SQL> 
+SQL> --Cost for query 2 after indexing:
+SQL> --1904
+SQL> 
+SQL> --Cost Savings for query 2
+SQL> --14014 - 1904 = 12110
+SQL> -- The system does a index range scan on IDX1 to find rows that satisfy the join condition between LINEITEM and PARTSUPP.
+SQL> -- Where a vertical traversal of the IDX1 index is conducted for the join operation.
+SQL> -- The system then do a full table scan of PARTSUPP as no index is created.
+SQL> 
+SQL> --Cost for query 3 before indexing:
+SQL> --2697
+SQL> 
+SQL> --Cost for query 3 after indexing:
+SQL> --3
+SQL> 
+SQL> --Cost Savings for query 3
+SQL> --2697 - 3 = 2694
+SQL> -- The system does a index range scan on IDX2 based on O_TOTALPRICE which is part of the created index.
+SQL> -- Where a vertical traversal of the IDX2 index is conducted to efficiently retrieve rows that match the O_TOTALPRICE condition.
+SQL> -- As O_ORDERKEY is a part of IDX2, the system does not need to access the database table, as all required information is available directly from the index.
+SQL> 
+SQL> --Cost for query 4 before indexing:
+SQL> --12154
+SQL> 
+SQL> --Cost for query 4 after indexing:
+SQL> --2934
+SQL> 
+SQL> --Cost Savings for query 4
+SQL> --12154 - 2934 = 9220
+SQL> -- The system does a INDEX FAST FULL SCAN on IDX1 based on L_DISCOUNT AND L_TAX which is part of the created index.
+SQL> -- Where a horizontal traversal of the IDX1 index is conducted to efficiently retrieve rows that match the L_DISCOUNT AND L_TAX condition
+SQL> -- As L_DISCOUNT AND L_TAX is a part of IDX1, the system does not need to access the database table, as all required information is available directly from the index.
+SQL> 
+SQL> SPOOL OFF

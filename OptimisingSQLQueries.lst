@@ -1,0 +1,350 @@
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> --Optimized Queries Start at Line 188
+SQL> --Name: Chan Kai Yang
+SQL> 
+SQL> --(1)
+SQL> 
+SQL> --Query 1
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_ORDERKEY, O_ORDERDATE, C_CUSTKEY
+  3  FROM ORDERS LEFT OUTER JOIN CUSTOMER
+  4  ON ORDERS.O_CUSTKEY = CUSTOMER.C_CUSTKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 247941471                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+------------------------------------------------------------------------------------                                                                                                                                                                                                                        
+| Id  | Operation          | Name          | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                        
+------------------------------------------------------------------------------------                                                                                                                                                                                                                        
+|   0 | SELECT STATEMENT   |               |   450K|  8789K|  2719   (1)| 00:00:01 |                                                                                                                                                                                                                        
+|   1 |  NESTED LOOPS OUTER|               |   450K|  8789K|  2719   (1)| 00:00:01 |                                                                                                                                                                                                                        
+|   2 |   TABLE ACCESS FULL| ORDERS        |   450K|  7031K|  2696   (1)| 00:00:01 |                                                                                                                                                                                                                        
+|*  3 |   INDEX UNIQUE SCAN| CUSTOMER_PKEY |     1 |     4 |     0   (0)| 00:00:01 |                                                                                                                                                                                                                        
+------------------------------------------------------------------------------------                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   3 - access("ORDERS"."O_CUSTKEY"="CUSTOMER"."C_CUSTKEY"(+))                                                                                                                                                                                                                                               
+
+15 rows selected.
+
+SQL> 
+SQL> --Query 2
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM PART
+  4  WHERE P_PARTKEY = 101
+  5  INTERSECT
+  6  SELECT *
+  7  FROM PART
+  8  WHERE P_NAME = 'bolt';
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 507123922                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+-------------------------------------------------------------------------------------------                                                                                                                                                                                                                 
+| Id  | Operation                    | Name       | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                 
+-------------------------------------------------------------------------------------------                                                                                                                                                                                                                 
+|   0 | SELECT STATEMENT             |            |     1 |   226 |   405   (1)| 00:00:01 |                                                                                                                                                                                                                 
+|   1 |  INTERSECTION                |            |       |       |            |          |                                                                                                                                                                                                                 
+|   2 |   TABLE ACCESS BY INDEX ROWID| PART       |     1 |   113 |     2   (0)| 00:00:01 |                                                                                                                                                                                                                 
+|*  3 |    INDEX UNIQUE SCAN         | PART_PEKEY |     1 |       |     1   (0)| 00:00:01 |                                                                                                                                                                                                                 
+|   4 |   SORT UNIQUE                |            |     1 |   113 |   402   (1)| 00:00:01 |                                                                                                                                                                                                                 
+|*  5 |    TABLE ACCESS FULL         | PART       |     1 |   113 |   401   (1)| 00:00:01 |                                                                                                                                                                                                                 
+-------------------------------------------------------------------------------------------                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   3 - access("P_PARTKEY"=101)                                                                                                                                                                                                                                                                              
+   5 - filter("P_NAME"='bolt')                                                                                                                                                                                                                                                                              
+
+18 rows selected.
+
+SQL> 
+SQL> --Query 3
+SQL> EXPLAIN PLAN FOR
+  2  SELECT P_NAME
+  3  FROM PART P
+  4  WHERE ( SELECT COUNT(*)
+  5   FROM PART
+  6   WHERE P.P_PARTKEY = PART.P_PARTKEY ) > 5;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2310518650                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+----------------------------------------------------------------------------------                                                                                                                                                                                                                          
+| Id  | Operation           | Name       | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                          
+----------------------------------------------------------------------------------                                                                                                                                                                                                                          
+|   0 | SELECT STATEMENT    |            | 60000 |  2226K| 47304   (1)| 00:00:02 |                                                                                                                                                                                                                          
+|*  1 |  FILTER             |            |       |       |            |          |                                                                                                                                                                                                                          
+|   2 |   TABLE ACCESS FULL | PART       | 60000 |  2226K|   401   (1)| 00:00:01 |                                                                                                                                                                                                                          
+|   3 |   SORT AGGREGATE    |            |     1 |     4 |            |          |                                                                                                                                                                                                                          
+|*  4 |    INDEX UNIQUE SCAN| PART_PEKEY |     1 |     4 |     1   (0)| 00:00:01 |                                                                                                                                                                                                                          
+----------------------------------------------------------------------------------                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - filter( (SELECT COUNT(*) FROM "PART" "PART" WHERE                                                                                                                                                                                                                                                    
+              "PART"."P_PARTKEY"=:B1)>5)                                                                                                                                                                                                                                                                    
+   4 - access("PART"."P_PARTKEY"=:B1)                                                                                                                                                                                                                                                                       
+
+18 rows selected.
+
+SQL> 
+SQL> --Query 4
+SQL> EXPLAIN PLAN FOR
+  2  SELECT C_NAME, C_ADDRESS
+  3  FROM CUSTOMER
+  4  WHERE C_NAME = (SELECT DISTINCT C_NAME
+  5   FROM CUSTOMER
+  6   WHERE C_NAME = 'James');
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2542011642                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+--------------------------------------------------------------------------------                                                                                                                                                                                                                            
+| Id  | Operation           | Name     | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                            
+--------------------------------------------------------------------------------                                                                                                                                                                                                                            
+|   0 | SELECT STATEMENT    |          |     1 |    44 |   780   (1)| 00:00:01 |                                                                                                                                                                                                                            
+|*  1 |  TABLE ACCESS FULL  | CUSTOMER |     1 |    44 |   389   (0)| 00:00:01 |                                                                                                                                                                                                                            
+|   2 |   SORT UNIQUE NOSORT|          |     1 |    18 |   390   (1)| 00:00:01 |                                                                                                                                                                                                                            
+|*  3 |    TABLE ACCESS FULL| CUSTOMER |     1 |    18 |   389   (0)| 00:00:01 |                                                                                                                                                                                                                            
+--------------------------------------------------------------------------------                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - filter("C_NAME"= (SELECT DISTINCT "C_NAME" FROM "CUSTOMER"                                                                                                                                                                                                                                           
+              "CUSTOMER" WHERE "C_NAME"='James'))                                                                                                                                                                                                                                                           
+   3 - filter("C_NAME"='James')                                                                                                                                                                                                                                                                             
+
+17 rows selected.
+
+SQL> 
+SQL> --Query 5
+SQL> EXPLAIN PLAN FOR
+  2  SELECT DISTINCT C_CUSTKEY, C_NAME
+  3   FROM CUSTOMER CROSS JOIN ORDERS;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1434941425                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+-----------------------------------------------------------------------------------------------                                                                                                                                                                                                             
+| Id  | Operation               | Name        | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |                                                                                                                                                                                                             
+-----------------------------------------------------------------------------------------------                                                                                                                                                                                                             
+|   0 | SELECT STATEMENT        |             |  1431M|    29G|       |   115M  (1)| 01:15:23 |                                                                                                                                                                                                             
+|   1 |  HASH UNIQUE            |             |  1431M|    29G|   530G|   115M  (1)| 01:15:23 |                                                                                                                                                                                                             
+|   2 |   MERGE JOIN CARTESIAN  |             |    20G|   414G|       |    14M  (1)| 00:09:36 |                                                                                                                                                                                                             
+|   3 |    TABLE ACCESS FULL    | CUSTOMER    | 45000 |   966K|       |   389   (0)| 00:00:01 |                                                                                                                                                                                                             
+|   4 |    BUFFER SORT          |             |   450K|       |       |    14M  (1)| 00:09:36 |                                                                                                                                                                                                             
+|   5 |     INDEX FAST FULL SCAN| ORDERS_PKEY |   450K|       |       |   327   (1)| 00:00:01 |                                                                                                                                                                                                             
+-----------------------------------------------------------------------------------------------                                                                                                                                                                                                             
+
+12 rows selected.
+
+SQL> 
+SQL> --(2)
+SQL> --(Improved Query 1)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_ORDERKEY, O_ORDERDATE, O_CUSTKEY AS C_CUSTKEY
+  3  FROM ORDERS
+  4  WHERE O_CUSTKEY IN (SELECT C_CUSTKEY FROM CUSTOMER);
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1275100350                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+| Id  | Operation         | Name   | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                                
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+|   0 | SELECT STATEMENT  |        |   450K|  7031K|  2696   (1)| 00:00:01 |                                                                                                                                                                                                                                
+|   1 |  TABLE ACCESS FULL| ORDERS |   450K|  7031K|  2696   (1)| 00:00:01 |                                                                                                                                                                                                                                
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+
+8 rows selected.
+
+SQL> 
+SQL> -- Query 1 is improved as there is no need to process the join criteria on O_CUSTKEY = C_CUSTKEY through an INDEX UNIQUE SCAN.
+SQL> 
+SQL> --(Improved Query 2)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM PART
+  4  WHERE P_PARTKEY = 101 AND P_NAME = 'bolt';
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1532124002                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+------------------------------------------------------------------------------------------                                                                                                                                                                                                                  
+| Id  | Operation                   | Name       | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                  
+------------------------------------------------------------------------------------------                                                                                                                                                                                                                  
+|   0 | SELECT STATEMENT            |            |     1 |   113 |     2   (0)| 00:00:01 |                                                                                                                                                                                                                  
+|*  1 |  TABLE ACCESS BY INDEX ROWID| PART       |     1 |   113 |     2   (0)| 00:00:01 |                                                                                                                                                                                                                  
+|*  2 |   INDEX UNIQUE SCAN         | PART_PEKEY |     1 |       |     1   (0)| 00:00:01 |                                                                                                                                                                                                                  
+------------------------------------------------------------------------------------------                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - filter("P_NAME"='bolt')                                                                                                                                                                                                                                                                              
+   2 - access("P_PARTKEY"=101)                                                                                                                                                                                                                                                                              
+
+15 rows selected.
+
+SQL> 
+SQL> -- Query 2 is improved as instead of processing 2 select statements in the PART table then using INTERSECT to return the rows that satisfy both conditions
+SQL> -- The new query processes only one select statement that utilises the primary key index with table access for P_NAME to retrieve required rows.
+SQL> 
+SQL> --(Improved Query 3)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT P.P_NAME
+  3  FROM PART P
+  4  GROUP BY P.P_PARTKEY, P.P_NAME HAVING COUNT(*) > 5;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 187315948                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                                                            
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+| Id  | Operation           | Name | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                                
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+|   0 | SELECT STATEMENT    |      |  3000 |   111K|   403   (1)| 00:00:01 |                                                                                                                                                                                                                                
+|*  1 |  FILTER             |      |       |       |            |          |                                                                                                                                                                                                                                
+|   2 |   HASH GROUP BY     |      |  3000 |   111K|   403   (1)| 00:00:01 |                                                                                                                                                                                                                                
+|   3 |    TABLE ACCESS FULL| PART | 60000 |  2226K|   400   (0)| 00:00:01 |                                                                                                                                                                                                                                
+----------------------------------------------------------------------------                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - filter(COUNT(*)>5)                                                                                                                                                                                                                                                                                   
+
+15 rows selected.
+
+SQL> 
+SQL> -- Query 3 is improved as grouping followed by the filter condition is more efficient than filtering the full table
+SQL> 
+SQL> --(Improved Query 4)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT C_NAME, C_ADDRESS
+  3  FROM CUSTOMER
+  4  WHERE C_NAME = 'James';
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2844954298                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+| Id  | Operation         | Name     | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                              
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+|   0 | SELECT STATEMENT  |          |     1 |    44 |   389   (0)| 00:00:01 |                                                                                                                                                                                                                              
+|*  1 |  TABLE ACCESS FULL| CUSTOMER |     1 |    44 |   389   (0)| 00:00:01 |                                                                                                                                                                                                                              
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                            
+Predicate Information (identified by operation id):                                                                                                                                                                                                                                                         
+---------------------------------------------------                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                            
+   1 - filter("C_NAME"='James')                                                                                                                                                                                                                                                                             
+
+13 rows selected.
+
+SQL> 
+SQL> -- Query 4 is improved as only 1 select statement is processed, where a full table scan of CUSTOMER is done.
+SQL> --Instead of processing 2 full table scans of CUSTOMER with a nested SELECT statement.
+SQL> 
+SQL> --(Improved Query 5)
+SQL> EXPLAIN PLAN FOR
+  2  SELECT DISTINCT C_CUSTKEY, C_NAME
+  3  FROM CUSTOMER;
+
+Explained.
+
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                                                                                                                                                                                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2844954298                                                                                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                                                                            
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+| Id  | Operation         | Name     | Rows  | Bytes | Cost (%CPU)| Time     |                                                                                                                                                                                                                              
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+|   0 | SELECT STATEMENT  |          | 45000 |   966K|   389   (0)| 00:00:01 |                                                                                                                                                                                                                              
+|   1 |  TABLE ACCESS FULL| CUSTOMER | 45000 |   966K|   389   (0)| 00:00:01 |                                                                                                                                                                                                                              
+------------------------------------------------------------------------------                                                                                                                                                                                                                              
+
+8 rows selected.
+
+SQL> 
+SQL> -- Query 5 is improved as there is no need to cross join with ORDERS table where number of rows = a cartesian product of CUSTOMERS x ORDERS
+SQL> -- if we are finding DISTINCT results.
+SQL> 
+SQL> SPOOL OFF
